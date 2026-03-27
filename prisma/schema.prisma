@@ -96,15 +96,16 @@ model Product {
 }
 
 model Store {
-  id        String    @id @default(uuid())
-  name      String    @db.VarChar(300)
-  address   String    @db.VarChar(500)
-  city      String    @db.VarChar(200)
-  state     String    @db.Char(2)
-  latitude  Float
-  longitude Float
-  type      StoreType @default(supermarket)
-  createdAt DateTime  @default(now()) @map("created_at")
+  id            String    @id @default(uuid())
+  name          String    @db.VarChar(300)
+  address       String    @db.VarChar(500)
+  city          String    @db.VarChar(200)
+  state         String    @db.Char(2)
+  latitude      Float
+  longitude     Float
+  type          StoreType @default(supermarket)
+  googlePlaceId String?   @unique @map("google_place_id") @db.VarChar(300)
+  createdAt     DateTime  @default(now()) @map("created_at")
 
   prices    Price[]
   purchases Purchase[]

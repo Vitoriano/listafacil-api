@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../core/prisma/prisma.service';
 import { PaginatedResponse } from '../core/dto/paginated-response.dto';
-import { ListStoresQueryDto } from './dto';
+import { CreateStoreDto, ListStoresQueryDto } from './dto';
 
 @Injectable()
 export class StoresService {
@@ -40,5 +40,35 @@ export class StoresService {
       throw new NotFoundException('Store not found');
     }
     return store;
+  }
+
+  async create(dto: CreateStoreDto) {
+    if (dto.googlePlaceId) {
+      const existing = await this.prisma.store.findUnique({
+        where: { googlePlaceId: dto.googlePlaceId },
+      });
+      if (existing) return existing;
+    }
+
+    const byNameAndAddress = await this.prisma.store.findFirst({
+      where: {
+        name: { equals: dto.name, mode: 'insensitive' },
+        address: { equals: dto.address, mode: 'insensitive' },
+        city: { equals: dto.city, mode: 'insensitive' },
+      },
+    });
+    if (byNameAndAddress) return byNameAndAddress;
+
+    return this.prisma.store.create({
+      data: {
+        name: dto.name,
+        address: dto.address,
+        city: dto.city,
+        state: dto.state.toUpperCase(),
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        googlePlaceId: dto.googlePlaceId,
+      },
+    });
   }
 }
