@@ -14,8 +14,11 @@ export class ProductsService {
     if (query.q) {
       where.name = { contains: query.q, mode: 'insensitive' };
     }
-    if (query.category) {
-      where.category = query.category;
+    if (query.categoryId) {
+      where.categoryId = query.categoryId;
+    }
+    if (query.subCategoryId) {
+      where.subCategoryId = query.subCategoryId;
     }
 
     const [data, total] = await Promise.all([
@@ -24,6 +27,10 @@ export class ProductsService {
         skip: query.skip,
         take: query.limit,
         orderBy: { name: 'asc' },
+        include: {
+          category: { select: { id: true, name: true } },
+          subCategory: { select: { id: true, name: true } },
+        },
       }),
       this.prisma.product.count({ where }),
     ]);
@@ -32,7 +39,13 @@ export class ProductsService {
   }
 
   async findById(id: string) {
-    const product = await this.prisma.product.findUnique({ where: { id } });
+    const product = await this.prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: { select: { id: true, name: true } },
+        subCategory: { select: { id: true, name: true } },
+      },
+    });
     if (!product) {
       throw new NotFoundException('Product not found');
     }
@@ -42,6 +55,10 @@ export class ProductsService {
   async findByBarcode(barcode: string) {
     const product = await this.prisma.product.findUnique({
       where: { barcode },
+      include: {
+        category: { select: { id: true, name: true } },
+        subCategory: { select: { id: true, name: true } },
+      },
     });
     if (!product) {
       throw new NotFoundException('Product not found');
@@ -50,6 +67,12 @@ export class ProductsService {
   }
 
   async create(dto: CreateProductDto) {
-    return this.prisma.product.create({ data: dto });
+    return this.prisma.product.create({
+      data: dto,
+      include: {
+        category: { select: { id: true, name: true } },
+        subCategory: { select: { id: true, name: true } },
+      },
+    });
   }
 }

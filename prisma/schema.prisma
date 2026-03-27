@@ -8,21 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum ProductCategory {
-  fruits
-  vegetables
-  dairy
-  meat
-  bakery
-  beverages
-  cleaning
-  hygiene
-  snacks
-  grains
-  frozen
-  other
-}
-
 enum StoreType {
   supermarket
   hypermarket
@@ -61,22 +46,52 @@ model User {
   @@map("users")
 }
 
-model Product {
-  id        String          @id @default(uuid())
-  name      String          @db.VarChar(300)
-  brand     String          @db.VarChar(200)
-  barcode   String          @unique @db.VarChar(50)
-  category  ProductCategory @default(other)
-  unit      String          @db.VarChar(50)
-  imageUrl  String?         @map("image_url")
-  createdAt DateTime        @default(now()) @map("created_at")
-  updatedAt DateTime        @updatedAt @map("updated_at")
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(200)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
+  subCategories SubCategory[]
+  products      Product[]
+
+  @@map("categories")
+}
+
+model SubCategory {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(200)
+  categoryId Int      @map("category_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  category Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@index([categoryId])
+  @@map("sub_categories")
+}
+
+model Product {
+  id            String   @id @default(uuid())
+  name          String   @db.VarChar(300)
+  brand         String   @db.VarChar(200)
+  barcode       String   @unique @db.VarChar(50)
+  categoryId    Int?     @map("category_id")
+  subCategoryId Int?     @map("sub_category_id")
+  unit          String   @db.VarChar(50)
+  imageUrl      String?  @map("image_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  category      Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
   prices        Price[]
   listItems     ListItem[]
   purchaseItems PurchaseItem[]
 
-  @@index([category, name])
+  @@index([categoryId, name])
+  @@index([subCategoryId])
   @@map("products")
 }
 

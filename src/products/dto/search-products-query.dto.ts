@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { ProductCategory } from '@prisma/client';
+import { IsInt, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PaginationQueryDto } from '../../core/dto/pagination-query.dto';
 
 export class SearchProductsQueryDto extends PaginationQueryDto {
@@ -9,8 +9,15 @@ export class SearchProductsQueryDto extends PaginationQueryDto {
   @IsString()
   q?: string;
 
-  @ApiPropertyOptional({ enum: ProductCategory })
+  @ApiPropertyOptional({ description: 'Filter by category ID' })
   @IsOptional()
-  @IsEnum(ProductCategory)
-  category?: ProductCategory;
+  @Type(() => Number)
+  @IsInt()
+  categoryId?: number;
+
+  @ApiPropertyOptional({ description: 'Filter by subcategory ID' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  subCategoryId?: number;
 }

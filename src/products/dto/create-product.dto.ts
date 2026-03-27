@@ -1,13 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsEnum,
+  IsInt,
   IsOptional,
   IsString,
   Length,
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { ProductCategory } from '@prisma/client';
+import { Type } from 'class-transformer';
 
 export class CreateProductDto {
   @ApiProperty({ example: 'Leite Integral' })
@@ -27,10 +27,17 @@ export class CreateProductDto {
   @Length(8, 14)
   barcode: string;
 
-  @ApiPropertyOptional({ enum: ProductCategory, default: 'other' })
+  @ApiPropertyOptional({ example: 1, description: 'Category ID' })
   @IsOptional()
-  @IsEnum(ProductCategory)
-  category?: ProductCategory;
+  @Type(() => Number)
+  @IsInt()
+  categoryId?: number;
+
+  @ApiPropertyOptional({ example: 1, description: 'SubCategory ID' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  subCategoryId?: number;
 
   @ApiProperty({ example: '1L' })
   @IsString()

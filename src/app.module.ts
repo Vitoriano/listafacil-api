@@ -3,6 +3,7 @@ import { CoreModule } from './core/core.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProductsModule } from './products/products.module';
+import { CategoriesModule } from './categories/categories.module';
 import { StoresModule } from './stores/stores.module';
 import { PricesModule } from './prices/prices.module';
 import { ListsModule } from './lists/lists.module';
@@ -15,6 +16,7 @@ import { HealthModule } from './health/health.module';
     AuthModule,
     UsersModule,
     ProductsModule,
+    CategoriesModule,
     StoresModule,
     PricesModule,
     ListsModule,
