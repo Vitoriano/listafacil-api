@@ -5,11 +5,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { WsGateway } from '../../ws/ws.gateway';
 import { ShareByEmailDto, GenerateInviteDto } from '../dto';
 
 @Injectable()
 export class InvitesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private ws: WsGateway,
+  ) {}
 
   async shareByEmail(listId: string, dto: ShareByEmailDto, inviterId: string) {
     const user = await this.prisma.user.findUnique({
@@ -29,6 +33,14 @@ export class InvitesService {
           role: dto.role || 'viewer',
         },
       });
+
+      this.ws.emitToList(listId, 'list:member:joined', {
+        listId,
+        userId: user.id,
+        role: dto.role || 'viewer',
+      });
+      this.ws.emitToUser(user.id, 'list:invited', { listId });
+
       return { joined: true, userId: user.id };
     }
 
@@ -105,6 +117,12 @@ export class InvitesService {
         data: { accepted: true },
       }),
     ]);
+
+    this.ws.emitToList(invite.listId, 'list:member:joined', {
+      listId: invite.listId,
+      userId,
+      role: invite.role,
+    });
 
     return { listId: invite.listId, role: invite.role };
   }

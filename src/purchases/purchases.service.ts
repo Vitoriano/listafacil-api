@@ -8,6 +8,7 @@ import {
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { PrismaService } from '../core/prisma/prisma.service';
+import { WsGateway } from '../ws/ws.gateway';
 import { PaginatedResponse } from '../core/dto/paginated-response.dto';
 import { PaginationQueryDto } from '../core/dto/pagination-query.dto';
 import {
@@ -21,6 +22,7 @@ import {
 export class PurchasesService {
   constructor(
     private prisma: PrismaService,
+    private ws: WsGateway,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -72,7 +74,7 @@ export class PurchasesService {
       where: { id: dto.storeId },
     });
 
-    return this.prisma.purchase.create({
+    const purchase = await this.prisma.purchase.create({
       data: {
         userId,
         storeId: dto.storeId,
@@ -80,6 +82,16 @@ export class PurchasesService {
       },
       include: { store: { select: { id: true, name: true } } },
     });
+
+    if (dto.linkedListId) {
+      this.ws.emitToList(dto.linkedListId, 'purchase:started', {
+        purchaseId: purchase.id,
+        storeId: dto.storeId,
+        userId,
+      });
+    }
+
+    return purchase;
   }
 
   async updateStatus(id: string, dto: UpdatePurchaseDto, userId: string) {
@@ -108,6 +120,15 @@ export class PurchasesService {
       await this.cacheManager.del(`user:${userId}:stats`);
     }
 
+    this.ws.emitToPurchase(id, 'purchase:status:updated', updated);
+
+    if (purchase.linkedListId) {
+      this.ws.emitToList(purchase.linkedListId, 'purchase:status:updated', {
+        purchaseId: id,
+        status: dto.status,
+      });
+    }
+
     return updated;
   }
 
@@ -121,7 +142,7 @@ export class PurchasesService {
       throw new BadRequestException('Cannot add items to a non-active purchase');
     }
 
-    return this.prisma.purchaseItem.create({
+    const item = await this.prisma.purchaseItem.create({
       data: {
         purchaseId,
         productId: dto.productId,
@@ -132,6 +153,17 @@ export class PurchasesService {
       },
       include: { product: true },
     });
+
+    this.ws.emitToPurchase(purchaseId, 'purchase:item:added', item);
+
+    if (purchase.linkedListId) {
+      this.ws.emitToList(purchase.linkedListId, 'purchase:item:added', {
+        purchaseId,
+        item,
+      });
+    }
+
+    return item;
   }
 
   async updateItem(
@@ -147,11 +179,14 @@ export class PurchasesService {
     });
     if (!item) throw new NotFoundException('Purchase item not found');
 
-    return this.prisma.purchaseItem.update({
+    const updated = await this.prisma.purchaseItem.update({
       where: { id: itemId },
       data: dto,
       include: { product: true },
     });
+
+    this.ws.emitToPurchase(purchaseId, 'purchase:item:updated', updated);
+    return updated;
   }
 
   async removeItem(purchaseId: string, itemId: string, userId: string) {
@@ -163,6 +198,8 @@ export class PurchasesService {
     if (!item) throw new NotFoundException('Purchase item not found');
 
     await this.prisma.purchaseItem.delete({ where: { id: itemId } });
+
+    this.ws.emitToPurchase(purchaseId, 'purchase:item:removed', { purchaseId, itemId });
   }
 
   private async verifyPurchaseOwnership(purchaseId: string, userId: string) {

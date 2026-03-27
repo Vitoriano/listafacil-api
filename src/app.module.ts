@@ -4,6 +4,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './categories/categories.module';
+import { WsModule } from './ws/ws.module';
 import { StoresModule } from './stores/stores.module';
 import { PricesModule } from './prices/prices.module';
 import { ListsModule } from './lists/lists.module';
@@ -22,6 +23,7 @@ import { HealthModule } from './health/health.module';
     ListsModule,
     PurchasesModule,
     HealthModule,
+    WsModule,
   ],
 })
 export class AppModule {}

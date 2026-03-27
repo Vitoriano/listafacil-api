@@ -4,11 +4,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../core/prisma/prisma.service';
+import { WsGateway } from '../ws/ws.gateway';
 import { CreateListDto, UpdateListDto } from './dto';
 
 @Injectable()
 export class ListsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private ws: WsGateway,
+  ) {}
 
   async findUserLists(userId: string) {
     const owned = await this.prisma.shoppingList.findMany({
@@ -52,10 +56,13 @@ export class ListsService {
 
   async update(id: string, dto: UpdateListDto, userId: string) {
     await this.verifyWriteAccess(id, userId);
-    return this.prisma.shoppingList.update({
+    const list = await this.prisma.shoppingList.update({
       where: { id },
       data: dto,
     });
+
+    this.ws.emitToList(id, 'list:updated', list);
+    return list;
   }
 
   async delete(id: string, userId: string) {
@@ -65,6 +72,8 @@ export class ListsService {
       throw new ForbiddenException('Only the owner can delete a list');
     }
     await this.prisma.shoppingList.delete({ where: { id } });
+
+    this.ws.emitToList(id, 'list:deleted', { listId: id });
   }
 
   async optimize(id: string) {

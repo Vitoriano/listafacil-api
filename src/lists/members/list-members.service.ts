@@ -4,10 +4,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { WsGateway } from '../../ws/ws.gateway';
 
 @Injectable()
 export class ListMembersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private ws: WsGateway,
+  ) {}
 
   async getMembers(listId: string) {
     const list = await this.prisma.shoppingList.findUnique({
@@ -56,5 +60,8 @@ export class ListMembersService {
     await this.prisma.listMember.delete({
       where: { listId_userId: { listId, userId: memberUserId } },
     });
+
+    this.ws.emitToList(listId, 'list:member:removed', { listId, userId: memberUserId });
+    this.ws.emitToUser(memberUserId, 'list:removed', { listId });
   }
 }
