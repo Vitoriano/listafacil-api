@@ -1,0 +1,246 @@
+generator client {
+  provider     = "prisma-client-js"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductCategory {
+  fruits
+  vegetables
+  dairy
+  meat
+  bakery
+  beverages
+  cleaning
+  hygiene
+  snacks
+  grains
+  frozen
+  other
+}
+
+enum StoreType {
+  supermarket
+  hypermarket
+  convenience
+  wholesale
+}
+
+enum PurchaseStatus {
+  active
+  completed
+  cancelled
+}
+
+enum ShareRole {
+  editor
+  viewer
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String   @db.VarChar(200)
+  email        String   @unique @db.VarChar(320)
+  passwordHash String   @map("password_hash") @db.VarChar(256)
+  avatarUrl    String?  @map("avatar_url")
+  joinedAt     DateTime @default(now()) @map("joined_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  prices           Price[]
+  priceValidations PriceValidation[]
+  shoppingLists    ShoppingList[]
+  listMembers      ListMember[]
+  listInvites      ListInvite[]
+  purchases        Purchase[]
+  refreshTokens    RefreshToken[]
+
+  @@map("users")
+}
+
+model Product {
+  id        String          @id @default(uuid())
+  name      String          @db.VarChar(300)
+  brand     String          @db.VarChar(200)
+  barcode   String          @unique @db.VarChar(50)
+  category  ProductCategory @default(other)
+  unit      String          @db.VarChar(50)
+  imageUrl  String?         @map("image_url")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  prices        Price[]
+  listItems     ListItem[]
+  purchaseItems PurchaseItem[]
+
+  @@index([category, name])
+  @@map("products")
+}
+
+model Store {
+  id        String    @id @default(uuid())
+  name      String    @db.VarChar(300)
+  address   String    @db.VarChar(500)
+  city      String    @db.VarChar(200)
+  state     String    @db.Char(2)
+  latitude  Float
+  longitude Float
+  type      StoreType @default(supermarket)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  prices    Price[]
+  purchases Purchase[]
+
+  @@index([state, city])
+  @@map("stores")
+}
+
+model Price {
+  id          String   @id @default(uuid())
+  productId   String   @map("product_id")
+  storeId     String   @map("store_id")
+  userId      String   @map("user_id")
+  price       Decimal  @db.Decimal(8, 2)
+  submittedAt DateTime @default(now()) @map("submitted_at")
+  isValid     Boolean  @default(true) @map("is_valid")
+
+  product     Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store       Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  validations PriceValidation[]
+
+  @@index([productId, submittedAt(sort: Desc)])
+  @@index([productId, storeId, submittedAt(sort: Desc)])
+  @@index([userId, submittedAt(sort: Desc)])
+  @@map("prices")
+}
+
+model PriceValidation {
+  id      String   @id @default(uuid())
+  priceId String   @map("price_id")
+  userId  String   @map("user_id")
+  isValid Boolean  @map("is_valid")
+  votedAt DateTime @default(now()) @map("voted_at")
+
+  price Price @relation(fields: [priceId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([priceId, userId])
+  @@map("price_validations")
+}
+
+model ShoppingList {
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(200)
+  ownerId   String   @map("owner_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  owner           User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items           ListItem[]
+  members         ListMember[]
+  invites         ListInvite[]
+  linkedPurchases Purchase[]
+
+  @@index([ownerId, updatedAt(sort: Desc)])
+  @@map("shopping_lists")
+}
+
+model ListItem {
+  id             String   @id @default(uuid())
+  listId         String   @map("list_id")
+  productId      String   @map("product_id")
+  quantity       Int      @default(1)
+  estimatedPrice Decimal  @default(0) @map("estimated_price") @db.Decimal(8, 2)
+  checked        Boolean  @default(false)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  list    ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  product Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, productId])
+  @@index([listId])
+  @@map("list_items")
+}
+
+model ListMember {
+  listId   String    @map("list_id")
+  userId   String    @map("user_id")
+  role     ShareRole @default(viewer)
+  joinedAt DateTime  @default(now()) @map("joined_at")
+
+  list ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([listId, userId])
+  @@index([userId])
+  @@map("list_members")
+}
+
+model ListInvite {
+  id        String    @id @default(uuid())
+  listId    String    @map("list_id")
+  invitedBy String    @map("invited_by")
+  email     String?   @db.VarChar(320)
+  role      ShareRole @default(viewer)
+  accepted  Boolean   @default(false)
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime  @map("expires_at")
+
+  list    ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  inviter User         @relation(fields: [invitedBy], references: [id], onDelete: Cascade)
+
+  @@index([listId])
+  @@map("list_invites")
+}
+
+model Purchase {
+  id           String         @id @default(uuid())
+  userId       String         @map("user_id")
+  storeId      String         @map("store_id")
+  linkedListId String?        @map("linked_list_id")
+  status       PurchaseStatus @default(active)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  completedAt  DateTime?      @map("completed_at")
+
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store      Store         @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  linkedList ShoppingList? @relation(fields: [linkedListId], references: [id], onDelete: SetNull)
+  items      PurchaseItem[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("purchases")
+}
+
+model PurchaseItem {
+  id         String  @id @default(uuid())
+  purchaseId String  @map("purchase_id")
+  productId  String  @map("product_id")
+  barcode    String  @db.VarChar(50)
+  price      Decimal @db.Decimal(8, 2)
+  quantity   Int     @default(1)
+  fromListId String? @map("from_list_id")
+
+  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([purchaseId])
+  @@map("purchase_items")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  token     String    @unique @db.VarChar(512)
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
