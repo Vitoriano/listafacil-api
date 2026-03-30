@@ -12,6 +12,8 @@ services:
       REDIS_URL: redis://redis:6379
     volumes:
       - .:/app
+      # node_modules isolado: após mudar package.json rode `docker compose build api` e suba de novo,
+      # ou remova o volume do serviço api (o CMD do Dockerfile.dev roda `npm ci` para alinhar deps).
       - /app/node_modules
     depends_on:
       postgres:

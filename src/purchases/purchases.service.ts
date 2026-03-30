@@ -45,15 +45,24 @@ export class PurchasesService {
   }
 
   async findRecent(userId: string) {
-    return this.prisma.purchase.findMany({
+    const purchases = await this.prisma.purchase.findMany({
       where: { userId, status: 'completed' },
       orderBy: { completedAt: 'desc' },
       take: 10,
       include: {
         store: { select: { id: true, name: true } },
+        items: { select: { price: true, quantity: true } },
         _count: { select: { items: true } },
       },
     });
+
+    return purchases.map(({ items, ...purchase }) => ({
+      ...purchase,
+      total: items.reduce(
+        (sum, item) => sum + Number(item.price) * item.quantity,
+        0,
+      ),
+    }));
   }
 
   async findById(id: string, userId: string) {

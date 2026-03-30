@@ -30,12 +30,28 @@ export class ProductsService {
         include: {
           category: { select: { id: true, name: true } },
           subCategory: { select: { id: true, name: true } },
+          prices: {
+            orderBy: { submittedAt: 'desc' },
+            take: 1,
+            select: {
+              id: true,
+              price: true,
+              storeId: true,
+              submittedAt: true,
+              store: { select: { id: true, name: true } },
+            },
+          },
         },
       }),
       this.prisma.product.count({ where }),
     ]);
 
-    return new PaginatedResponse(data, total, query.page, query.limit);
+    const products = data.map(({ prices, ...product }) => ({
+      ...product,
+      latestPrice: prices[0] ?? null,
+    }));
+
+    return new PaginatedResponse(products, total, query.page, query.limit);
   }
 
   async findById(id: string) {
@@ -44,12 +60,24 @@ export class ProductsService {
       include: {
         category: { select: { id: true, name: true } },
         subCategory: { select: { id: true, name: true } },
+        prices: {
+          orderBy: { submittedAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            price: true,
+            storeId: true,
+            submittedAt: true,
+            store: { select: { id: true, name: true } },
+          },
+        },
       },
     });
     if (!product) {
       throw new NotFoundException('Product not found');
     }
-    return product;
+    const { prices, ...rest } = product;
+    return { ...rest, latestPrice: prices[0] ?? null };
   }
 
   async findByBarcode(barcode: string) {
@@ -58,12 +86,24 @@ export class ProductsService {
       include: {
         category: { select: { id: true, name: true } },
         subCategory: { select: { id: true, name: true } },
+        prices: {
+          orderBy: { submittedAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            price: true,
+            storeId: true,
+            submittedAt: true,
+            store: { select: { id: true, name: true } },
+          },
+        },
       },
     });
     if (!product) {
       throw new NotFoundException('Product not found');
     }
-    return product;
+    const { prices, ...rest } = product;
+    return { ...rest, latestPrice: prices[0] ?? null };
   }
 
   async create(dto: CreateProductDto) {

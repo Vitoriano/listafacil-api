@@ -15,27 +15,59 @@ export class ListsService {
   ) {}
 
   async findUserLists(userId: string) {
+    const includeOpts = {
+      _count: { select: { items: true, members: true } },
+      items: { select: { estimatedPrice: true, quantity: true } },
+    };
+
     const owned = await this.prisma.shoppingList.findMany({
       where: { ownerId: userId },
       orderBy: { updatedAt: 'desc' },
-      include: { _count: { select: { items: true, members: true } } },
+      include: includeOpts,
     });
 
     const memberOf = await this.prisma.shoppingList.findMany({
       where: { members: { some: { userId } } },
       orderBy: { updatedAt: 'desc' },
-      include: { _count: { select: { items: true, members: true } } },
+      include: includeOpts,
     });
 
     const memberIds = new Set(memberOf.map((l) => l.id));
-    return [...owned.filter((l) => !memberIds.has(l.id)), ...memberOf];
+    const lists = [...owned.filter((l) => !memberIds.has(l.id)), ...memberOf];
+
+    return lists.map(({ items, ...list }) => ({
+      ...list,
+      estimatedTotal: items.reduce(
+        (sum, item) => sum + Number(item.estimatedPrice) * item.quantity,
+        0,
+      ),
+    }));
   }
 
   async findById(id: string, userId: string) {
     const list = await this.prisma.shoppingList.findUnique({
       where: { id },
       include: {
-        items: { include: { product: true }, orderBy: { createdAt: 'asc' } },
+        items: {
+          include: {
+            product: {
+              include: {
+                prices: {
+                  orderBy: { submittedAt: 'desc' },
+                  take: 1,
+                  select: {
+                    id: true,
+                    price: true,
+                    storeId: true,
+                    submittedAt: true,
+                    store: { select: { id: true, name: true } },
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
         members: { include: { user: { select: { id: true, name: true, email: true } } } },
         owner: { select: { id: true, name: true, email: true } },
       },
@@ -45,7 +77,16 @@ export class ListsService {
       throw new NotFoundException('Shopping list not found');
     }
 
-    return list;
+    return {
+      ...list,
+      items: list.items.map(({ product, ...item }) => {
+        const { prices, ...productData } = product;
+        return {
+          ...item,
+          product: { ...productData, latestPrice: prices[0] ?? null },
+        };
+      }),
+    };
   }
 
   async create(dto: CreateListDto, userId: string) {

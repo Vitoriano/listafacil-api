@@ -22,11 +22,31 @@ export class ListItemsService {
         quantity: dto.quantity ?? 1,
         estimatedPrice: dto.estimatedPrice ?? 0,
       },
-      include: { product: true },
+      include: {
+        product: {
+          include: {
+            prices: {
+              orderBy: { submittedAt: 'desc' },
+              take: 1,
+              select: {
+                id: true,
+                price: true,
+                storeId: true,
+                submittedAt: true,
+                store: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
+      },
     });
 
-    this.ws.emitToList(listId, 'list:item:added', item);
-    return item;
+    const { product, ...rest } = item;
+    const { prices, ...productData } = product;
+    const result = { ...rest, product: { ...productData, latestPrice: prices[0] ?? null } };
+
+    this.ws.emitToList(listId, 'list:item:added', result);
+    return result;
   }
 
   async updateItem(listId: string, itemId: string, dto: UpdateListItemDto) {
@@ -38,11 +58,31 @@ export class ListItemsService {
     const updated = await this.prisma.listItem.update({
       where: { id: itemId },
       data: dto,
-      include: { product: true },
+      include: {
+        product: {
+          include: {
+            prices: {
+              orderBy: { submittedAt: 'desc' },
+              take: 1,
+              select: {
+                id: true,
+                price: true,
+                storeId: true,
+                submittedAt: true,
+                store: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
+      },
     });
 
-    this.ws.emitToList(listId, 'list:item:updated', updated);
-    return updated;
+    const { product, ...rest } = updated;
+    const { prices, ...productData } = product;
+    const result = { ...rest, product: { ...productData, latestPrice: prices[0] ?? null } };
+
+    this.ws.emitToList(listId, 'list:item:updated', result);
+    return result;
   }
 
   async removeItem(listId: string, itemId: string) {

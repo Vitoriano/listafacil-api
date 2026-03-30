@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   HealthCheck,
   HealthCheckService,
@@ -20,6 +20,26 @@ export class HealthController {
   @Public()
   @Get()
   @HealthCheck()
+  @ApiOperation({ summary: 'Health check (database + memory)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Service is healthy',
+    schema: {
+      example: {
+        status: 'ok',
+        info: {
+          database: { status: 'up' },
+          memory_heap: { status: 'up' },
+        },
+        error: {},
+        details: {
+          database: { status: 'up' },
+          memory_heap: { status: 'up' },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 503, description: 'Service is unhealthy' })
   check() {
     return this.health.check([
       async () => {

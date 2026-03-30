@@ -23,7 +23,10 @@
     "db:migrate:deploy": "npx prisma migrate deploy",
     "db:seed": "npx prisma db seed",
     "db:generate": "npx prisma generate",
-    "db:studio": "npx prisma studio"
+    "db:studio": "npx prisma studio",
+    "db:migrate:old": "npx ts-node prisma/migrate-old-data.ts",
+    "db:migrate:old:selftest": "npx ts-node prisma/migrate-old-data.selftest.ts",
+    "db:migrate:old:prices": "npx ts-node prisma/migrate-old-prices.ts"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.1.0",
@@ -46,6 +49,7 @@
     "class-validator": "^0.14.4",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.3"
@@ -61,6 +65,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
     "@types/passport-jwt": "^4.0.1",
+    "@types/pg": "^8.20.0",
     "@types/supertest": "^6.0.2",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
