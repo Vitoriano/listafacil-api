@@ -90,9 +90,13 @@ export class ListsService {
   }
 
   async create(dto: CreateListDto, userId: string) {
-    return this.prisma.shoppingList.create({
+    const list = await this.prisma.shoppingList.create({
       data: { name: dto.name, ownerId: userId },
     });
+
+    await this.ws.joinUserToList(userId, list.id);
+
+    return list;
   }
 
   async update(id: string, dto: UpdateListDto, userId: string) {

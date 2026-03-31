@@ -34,6 +34,7 @@ export class InvitesService {
         },
       });
 
+      await this.ws.joinUserToList(user.id, listId);
       this.ws.emitToList(listId, 'list:member:joined', {
         listId,
         userId: user.id,
@@ -118,6 +119,7 @@ export class InvitesService {
       }),
     ]);
 
+    await this.ws.joinUserToList(userId, invite.listId);
     this.ws.emitToList(invite.listId, 'list:member:joined', {
       listId: invite.listId,
       userId,

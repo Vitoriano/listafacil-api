@@ -2,6 +2,5 @@ FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
-# npm ci a cada start: o volume anônimo /app/node_modules do compose pode ficar
-# desatualizado após novas deps no package.json (ex.: pg); sem isso o TS não acha o módulo.
-CMD ["sh", "-c", "npm ci && npx prisma generate && npx prisma migrate deploy && npx ts-node prisma/seed.ts && npm run start:dev"]
+COPY docker-entrypoint.dev.sh ./
+CMD ["sh", "docker-entrypoint.dev.sh"]

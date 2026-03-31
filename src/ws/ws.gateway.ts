@@ -10,6 +10,7 @@ import {
 import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { WsAuthService } from './ws-auth.service';
+import { PrismaService } from '../core/prisma/prisma.service';
 
 @WebSocketGateway({
   cors: { origin: '*' },
@@ -21,7 +22,10 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private logger = new Logger('WsGateway');
 
-  constructor(private wsAuth: WsAuthService) {}
+  constructor(
+    private wsAuth: WsAuthService,
+    private prisma: PrismaService,
+  ) {}
 
   async handleConnection(client: Socket) {
     const user = await this.wsAuth.authenticate(client);
@@ -31,7 +35,31 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     client.data.userId = user.id;
     client.join(`user:${user.id}`);
-    this.logger.log(`Client connected: ${user.id}`);
+
+    // Auto-join all lists the user owns or is a member of
+    const [ownedLists, memberships] = await Promise.all([
+      this.prisma.shoppingList.findMany({
+        where: { ownerId: user.id },
+        select: { id: true },
+      }),
+      this.prisma.listMember.findMany({
+        where: { userId: user.id },
+        select: { listId: true },
+      }),
+    ]);
+
+    const listIds = new Set([
+      ...ownedLists.map((l) => l.id),
+      ...memberships.map((m) => m.listId),
+    ]);
+
+    for (const listId of listIds) {
+      client.join(`list:${listId}`);
+    }
+
+    this.logger.log(
+      `Client connected: ${user.id} (joined ${listIds.size} lists)`,
+    );
   }
 
   handleDisconnect(client: Socket) {
@@ -75,6 +103,13 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   emitToList(listId: string, event: string, payload: any) {
     this.server.to(`list:${listId}`).emit(event, payload);
+  }
+
+  async joinUserToList(userId: string, listId: string) {
+    const sockets = await this.server.in(`user:${userId}`).fetchSockets();
+    for (const socket of sockets) {
+      socket.join(`list:${listId}`);
+    }
   }
 
   // --- Purchase events ---
