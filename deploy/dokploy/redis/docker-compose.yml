@@ -1,0 +1,48 @@
+# Stack listafacil-redis — Dokploy Docker Compose
+# Path: deploy/dokploy/redis/docker-compose.yml
+#
+# Stack separado do da API. Os dois se enxergam pela rede `dokploy-network`
+# (criada pelo próprio Dokploy). Como essa rede é compartilhada com outros apps
+# do servidor, o Redis tem alias fixo (`listafacil-redis`) e exige senha.
+#
+# Env neste stack (UI do Dokploy):
+#   REDIS_PASSWORD   obrigatório
+#
+# Sem domínio e sem `ports`: só a API acessa, pela rede interna.
+
+name: listafacil-redis
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: listafacil-redis
+    command:
+      - sh
+      - -c
+      - >-
+        exec redis-server
+        --appendonly yes
+        --maxmemory 256mb
+        --maxmemory-policy allkeys-lru
+        --requirepass "$$REDIS_PASSWORD"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis-data:/data
+    networks:
+      dokploy-network:
+        aliases:
+          - listafacil-redis
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+
+networks:
+  dokploy-network:
+    external: true
