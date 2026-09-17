@@ -29,7 +29,10 @@ export class ListsController {
   constructor(private listsService: ListsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all shopping lists for the authenticated user (owned + shared)' })
+  @ApiOperation({
+    summary:
+      'Get all shopping lists for the authenticated user (owned + shared)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Array of shopping lists with item and member counts',
@@ -42,7 +45,7 @@ export class ListsController {
           createdAt: '2026-03-30T00:00:00.000Z',
           updatedAt: '2026-03-30T00:00:00.000Z',
           _count: { items: 12, members: 2 },
-          estimatedTotal: 245.80,
+          estimatedTotal: 245.8,
         },
       ],
     },
@@ -76,7 +79,8 @@ export class ListsController {
   @ApiParam({ name: 'id', description: 'Shopping List ID (UUID)' })
   @ApiResponse({
     status: 200,
-    description: 'Shopping list with all items (including product), members and owner',
+    description:
+      'Shopping list with all items (including product), members and owner',
     schema: {
       example: {
         id: 'uuid',
@@ -91,7 +95,11 @@ export class ListsController {
             userId: 'uuid',
             role: 'editor',
             joinedAt: '2026-03-30T00:00:00.000Z',
-            user: { id: 'uuid', name: 'Maria Santos', email: 'maria@email.com' },
+            user: {
+              id: 'uuid',
+              name: 'Maria Santos',
+              email: 'maria@email.com',
+            },
           },
         ],
         items: [
@@ -163,7 +171,10 @@ export class ListsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a shopping list (owner only)' })
   @ApiParam({ name: 'id', description: 'Shopping List ID (UUID)' })
-  @ApiResponse({ status: 204, description: 'List deleted successfully (no content)' })
+  @ApiResponse({
+    status: 204,
+    description: 'List deleted successfully (no content)',
+  })
   @ApiResponse({ status: 403, description: 'Only the owner can delete a list' })
   @ApiResponse({ status: 404, description: 'Shopping list not found' })
   delete(@Param('id') id: string, @CurrentUser('id') userId: string) {
@@ -172,11 +183,14 @@ export class ListsController {
 
   @Get(':id/optimize')
   @UseGuards(ListAccessGuard)
-  @ApiOperation({ summary: 'Find the cheapest store for all items in the list' })
+  @ApiOperation({
+    summary: 'Find the cheapest store for all items in the list',
+  })
   @ApiParam({ name: 'id', description: 'Shopping List ID (UUID)' })
   @ApiResponse({
     status: 200,
-    description: 'Store ranking with total cost, items available/missing, and savings',
+    description:
+      'Store ranking with total cost, items available/missing, and savings',
     schema: {
       example: {
         listId: 'uuid',

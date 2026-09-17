@@ -68,7 +68,9 @@ export class ListsService {
           },
           orderBy: { createdAt: 'asc' },
         },
-        members: { include: { user: { select: { id: true, name: true, email: true } } } },
+        members: {
+          include: { user: { select: { id: true, name: true, email: true } } },
+        },
         owner: { select: { id: true, name: true, email: true } },
       },
     });
@@ -184,9 +186,13 @@ export class ListsService {
           storeId: ranked[0].storeId,
           storeName: ranked[0].storeName,
           totalCost: ranked[0].totalCost,
-          savings: ranked.length > 1
-            ? Math.round((ranked[ranked.length - 1].totalCost - ranked[0].totalCost) * 100) / 100
-            : 0,
+          savings:
+            ranked.length > 1
+              ? Math.round(
+                  (ranked[ranked.length - 1].totalCost - ranked[0].totalCost) *
+                    100,
+                ) / 100
+              : 0,
         }
       : null;
 

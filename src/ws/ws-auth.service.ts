@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Socket } from 'socket.io';
+import { getJwtKey } from '../core/config/jwt-keys';
 
 @Injectable()
 export class WsAuthService {
@@ -12,7 +13,9 @@ export class WsAuthService {
     private config: ConfigService,
   ) {}
 
-  async authenticate(client: Socket): Promise<{ id: string; email: string } | null> {
+  async authenticate(
+    client: Socket,
+  ): Promise<{ id: string; email: string } | null> {
     try {
       const token =
         client.handshake.auth?.token ||
@@ -24,7 +27,7 @@ export class WsAuthService {
       }
 
       const payload = await this.jwt.verifyAsync(token, {
-        publicKey: this.config.get<string>('JWT_PUBLIC_KEY', ''),
+        publicKey: getJwtKey(this.config, 'PUBLIC'),
         algorithms: ['RS256'],
       });
 

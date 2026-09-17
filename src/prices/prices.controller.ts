@@ -121,7 +121,8 @@ export class PricesController {
   @ApiParam({ name: 'productId', description: 'Product ID (UUID)' })
   @ApiResponse({
     status: 200,
-    description: 'Array of historical prices sorted chronologically (ascending)',
+    description:
+      'Array of historical prices sorted chronologically (ascending)',
     schema: {
       example: [
         {
@@ -148,9 +149,14 @@ export class PricesController {
 
   @Post('prices/:priceId/validate')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Vote on price validity (cannot vote on own price)' })
+  @ApiOperation({
+    summary: 'Vote on price validity (cannot vote on own price)',
+  })
   @ApiParam({ name: 'priceId', description: 'Price ID (UUID)' })
-  @ApiResponse({ status: 204, description: 'Vote registered successfully (no content)' })
+  @ApiResponse({
+    status: 204,
+    description: 'Vote registered successfully (no content)',
+  })
   @ApiResponse({ status: 403, description: 'Cannot validate your own price' })
   @ApiResponse({ status: 404, description: 'Price not found' })
   @ApiResponse({ status: 409, description: 'Already voted on this price' })

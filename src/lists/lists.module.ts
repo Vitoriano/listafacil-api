@@ -15,7 +15,12 @@ import { InvitesService } from './invites/invites.service';
     ListMembersController,
     InvitesController,
   ],
-  providers: [ListsService, ListItemsService, ListMembersService, InvitesService],
+  providers: [
+    ListsService,
+    ListItemsService,
+    ListMembersService,
+    InvitesService,
+  ],
   exports: [ListsService],
 })
 export class ListsModule {}

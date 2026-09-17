@@ -39,7 +39,11 @@ export class ListMembersService {
     };
   }
 
-  async removeMember(listId: string, memberUserId: string, currentUserId: string) {
+  async removeMember(
+    listId: string,
+    memberUserId: string,
+    currentUserId: string,
+  ) {
     const list = await this.prisma.shoppingList.findUnique({
       where: { id: listId },
     });
@@ -61,7 +65,10 @@ export class ListMembersService {
       where: { listId_userId: { listId, userId: memberUserId } },
     });
 
-    this.ws.emitToList(listId, 'list:member:removed', { listId, userId: memberUserId });
+    this.ws.emitToList(listId, 'list:member:removed', {
+      listId,
+      userId: memberUserId,
+    });
     this.ws.emitToUser(memberUserId, 'list:removed', { listId });
   }
 }

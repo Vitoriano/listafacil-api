@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import { getJwtKey } from '../core/config/jwt-keys';
 import { PrismaService } from '../core/prisma/prisma.service';
 import { RegisterDto, LoginDto, AuthResponseDto, TokenPairDto } from './dto';
 
@@ -101,9 +102,12 @@ export class AuthService {
     const accessToken = this.jwt.sign(
       { sub: userId, email },
       {
-        privateKey: this.config.get<string>('JWT_PRIVATE_KEY'),
+        privateKey: getJwtKey(this.config, 'PRIVATE'),
         algorithm: 'RS256',
-        expiresIn: this.config.get<string>('JWT_ACCESS_EXPIRATION', '15m') as any,
+        expiresIn: this.config.get<string>(
+          'JWT_ACCESS_EXPIRATION',
+          '15m',
+        ) as any,
       },
     );
 
@@ -117,9 +121,7 @@ export class AuthService {
       data: {
         userId,
         token: refreshToken,
-        expiresAt: new Date(
-          Date.now() + expirationDays * 24 * 60 * 60 * 1000,
-        ),
+        expiresAt: new Date(Date.now() + expirationDays * 24 * 60 * 60 * 1000),
       },
     });
 

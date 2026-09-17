@@ -117,11 +117,7 @@ export class PricesService {
     }));
   }
 
-  async validatePrice(
-    priceId: string,
-    dto: ValidatePriceDto,
-    userId: string,
-  ) {
+  async validatePrice(priceId: string, dto: ValidatePriceDto, userId: string) {
     const price = await this.prisma.price.findUnique({
       where: { id: priceId },
     });

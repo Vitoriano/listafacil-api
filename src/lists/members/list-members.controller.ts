@@ -56,9 +56,18 @@ export class ListMembersController {
   @ApiOperation({ summary: 'Remove a member from the list (owner or self)' })
   @ApiParam({ name: 'id', description: 'Shopping List ID (UUID)' })
   @ApiParam({ name: 'userId', description: 'User ID of the member to remove' })
-  @ApiResponse({ status: 204, description: 'Member removed successfully (no content)' })
-  @ApiResponse({ status: 403, description: 'Only the owner can remove other members' })
-  @ApiResponse({ status: 404, description: 'Shopping list or member not found' })
+  @ApiResponse({
+    status: 204,
+    description: 'Member removed successfully (no content)',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Only the owner can remove other members',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Shopping list or member not found',
+  })
   removeMember(
     @Param('id') listId: string,
     @Param('userId') memberUserId: string,

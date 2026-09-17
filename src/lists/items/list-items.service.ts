@@ -43,7 +43,10 @@ export class ListItemsService {
 
     const { product, ...rest } = item;
     const { prices, ...productData } = product;
-    const result = { ...rest, product: { ...productData, latestPrice: prices[0] ?? null } };
+    const result = {
+      ...rest,
+      product: { ...productData, latestPrice: prices[0] ?? null },
+    };
 
     this.ws.emitToList(listId, 'list:item:added', result);
     return result;
@@ -79,7 +82,10 @@ export class ListItemsService {
 
     const { product, ...rest } = updated;
     const { prices, ...productData } = product;
-    const result = { ...rest, product: { ...productData, latestPrice: prices[0] ?? null } };
+    const result = {
+      ...rest,
+      product: { ...productData, latestPrice: prices[0] ?? null },
+    };
 
     this.ws.emitToList(listId, 'list:item:updated', result);
     return result;

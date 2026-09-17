@@ -1,0 +1,87 @@
+# Stack listafacil-api — Dokploy Docker Compose
+# Path: deploy/dokploy/docker-compose.yml
+#
+# Env neste stack (configurar na UI do Dokploy — nunca commitar .env de prod):
+#   DATABASE_URL, JWT_PRIVATE_KEY_B64, JWT_PUBLIC_KEY_B64            (obrigatórias)
+#   IMAGE_TAG, JWT_ACCESS_EXPIRATION, JWT_REFRESH_EXPIRATION_DAYS   (opcionais)
+#
+# Imagem: alinhada ao push CI → ghcr.io/vitoriano/listafacil-api
+#
+# Domínio na UI do Dokploy: <api.listafacil.seu-dominio> → serviço `api`, porta 3000.
+# Swagger em /api/docs; health em /v1/health; Socket.IO no mesmo host.
+
+name: listafacil-api
+
+services:
+  api:
+    image: ghcr.io/vitoriano/listafacil-api:${IMAGE_TAG:-latest}
+    pull_policy: always
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      # Postgres no Neon (URL pooled) — migrations rodam no CI, não aqui.
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      # Redis do próprio stack (cache). Não exposto fora da rede.
+      REDIS_URL: redis://redis:6379
+      # Par RSA (RS256) em base64 — gere com `openssl`, veja DEPLOY.md.
+      JWT_PRIVATE_KEY_B64: ${JWT_PRIVATE_KEY_B64:?JWT_PRIVATE_KEY_B64 is required}
+      JWT_PUBLIC_KEY_B64: ${JWT_PUBLIC_KEY_B64:?JWT_PUBLIC_KEY_B64 is required}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-15m}
+      JWT_REFRESH_EXPIRATION_DAYS: ${JWT_REFRESH_EXPIRATION_DAYS:-30}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - listafacil-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"require('http').get('http://127.0.0.1:3000/v1/health',(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\"",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  redis:
+    image: redis:7-alpine
+    command:
+      [
+        "redis-server",
+        "--appendonly", "yes",
+        "--maxmemory", "256mb",
+        "--maxmemory-policy", "allkeys-lru",
+      ]
+    volumes:
+      - redis-data:/data
+    networks:
+      - listafacil-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+
+volumes:
+  redis-data:
+
+networks:
+  listafacil-network:
+    name: listafacil-network
+    driver: bridge

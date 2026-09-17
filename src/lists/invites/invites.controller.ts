@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -27,7 +20,10 @@ export class InvitesController {
   @ApiBearerAuth()
   @UseGuards(ListAccessGuard)
   @Post('lists/:id/share/email')
-  @ApiOperation({ summary: 'Share a list by email (adds directly if user exists, creates invite otherwise)' })
+  @ApiOperation({
+    summary:
+      'Share a list by email (adds directly if user exists, creates invite otherwise)',
+  })
   @ApiParam({ name: 'id', description: 'Shopping List ID (UUID)' })
   @ApiResponse({
     status: 201,
@@ -115,7 +111,10 @@ export class InvitesController {
   })
   @ApiResponse({ status: 403, description: 'Invite has expired' })
   @ApiResponse({ status: 404, description: 'Invite not found' })
-  @ApiResponse({ status: 409, description: 'Invite already accepted or user already a member' })
+  @ApiResponse({
+    status: 409,
+    description: 'Invite already accepted or user already a member',
+  })
   acceptInvite(
     @Param('inviteId') inviteId: string,
     @CurrentUser('id') userId: string,

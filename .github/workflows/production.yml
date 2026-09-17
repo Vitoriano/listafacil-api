@@ -1,0 +1,120 @@
+name: Deploy to PROD
+
+on:
+  # Merge de PR para `production` gera push nesta branch.
+  push:
+    branches: [production]
+  workflow_dispatch:
+
+concurrency:
+  group: production-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: listafacil-api
+  NODE_VERSION: "20"
+
+jobs:
+  migrate:
+    name: Database migrations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npm run db:generate
+
+      - name: Apply Prisma migrations (production)
+        env:
+          DATABASE_URL_POOLED: ${{ secrets.DATABASE_URL }}
+          # Sem advisory lock: o `concurrency` deste workflow já garante um
+          # deploy por vez, e uma sessão presa no Neon segurava o lock (P1002).
+          PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK: "1"
+        run: |
+          if [ -z "$DATABASE_URL_POOLED" ]; then
+            echo "DATABASE_URL secret is required — configure it in GitHub (Settings → Secrets → Actions)."
+            exit 1
+          fi
+          # O pooler do Neon (PgBouncer) não suporta o advisory lock do Prisma
+          # Migrate. Migrations usam o endpoint direto: remove "-pooler" do host.
+          # O runtime (Dokploy) continua usando a URL pooled.
+          export DATABASE_URL="${DATABASE_URL_POOLED/-pooler./.}"
+          npm run db:migrate:deploy
+
+  build-and-push:
+    name: Build and push
+    needs: migrate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve image reference
+        id: image
+        run: |
+          # owner/imagem em minúsculas: ghcr.io/<owner>/listafacil-api
+          echo "name=${{ env.REGISTRY }}/$(echo '${{ github.repository_owner }}/${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          target: production
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Trigger Dokploy
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Dokploy redeploy
+        env:
+          DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
+        run: |
+          if [ -n "$DOKPLOY_WEBHOOK_URL" ]; then
+            echo "Calling Dokploy stack webhook…"
+            curl -fsSL -X POST "$DOKPLOY_WEBHOOK_URL"
+          else
+            echo "DOKPLOY_WEBHOOK_URL not set — image was pushed to GHCR only."
+          fi

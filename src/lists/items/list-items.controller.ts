@@ -69,7 +69,9 @@ export class ListItemsController {
   }
 
   @Patch(':itemId')
-  @ApiOperation({ summary: 'Update a list item (quantity, estimated price, checked)' })
+  @ApiOperation({
+    summary: 'Update a list item (quantity, estimated price, checked)',
+  })
   @ApiParam({ name: 'id', description: 'Shopping List ID (UUID)' })
   @ApiParam({ name: 'itemId', description: 'List Item ID (UUID)' })
   @ApiResponse({
@@ -120,7 +122,10 @@ export class ListItemsController {
   @ApiOperation({ summary: 'Remove an item from a shopping list' })
   @ApiParam({ name: 'id', description: 'Shopping List ID (UUID)' })
   @ApiParam({ name: 'itemId', description: 'List Item ID (UUID)' })
-  @ApiResponse({ status: 204, description: 'Item removed successfully (no content)' })
+  @ApiResponse({
+    status: 204,
+    description: 'Item removed successfully (no content)',
+  })
   @ApiResponse({ status: 404, description: 'List item not found' })
   removeItem(@Param('id') listId: string, @Param('itemId') itemId: string) {
     return this.listItemsService.removeItem(listId, itemId);

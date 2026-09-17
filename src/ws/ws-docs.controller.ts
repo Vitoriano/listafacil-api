@@ -1,5 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiExcludeEndpoint, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiExcludeEndpoint,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
 @ApiTags('WebSocket Events')
 @Controller('ws-docs')
@@ -25,7 +30,10 @@ On successful connection, the server automatically joins the client to:
 - \`list:{listId}\` rooms for all lists the user owns or is a member of
     `,
   })
-  @ApiResponse({ status: 200, description: 'Documentation only — this endpoint is not callable' })
+  @ApiResponse({
+    status: 200,
+    description: 'Documentation only — this endpoint is not callable',
+  })
   connection() {
     return { info: 'This endpoint exists only for documentation purposes.' };
   }
@@ -75,7 +83,10 @@ Leave a purchase room.
 \`\`\`
     `,
   })
-  @ApiResponse({ status: 200, description: 'Documentation only — this endpoint is not callable' })
+  @ApiResponse({
+    status: 200,
+    description: 'Documentation only — this endpoint is not callable',
+  })
   clientEvents() {
     return { info: 'This endpoint exists only for documentation purposes.' };
   }
@@ -144,7 +155,10 @@ Emitted when a list item is removed.
 \`\`\`
     `,
   })
-  @ApiResponse({ status: 200, description: 'Documentation only — this endpoint is not callable' })
+  @ApiResponse({
+    status: 200,
+    description: 'Documentation only — this endpoint is not callable',
+  })
   listItemEvents() {
     return { info: 'This endpoint exists only for documentation purposes.' };
   }
@@ -184,7 +198,10 @@ Emitted when a list is deleted by the owner.
 \`\`\`
     `,
   })
-  @ApiResponse({ status: 200, description: 'Documentation only — this endpoint is not callable' })
+  @ApiResponse({
+    status: 200,
+    description: 'Documentation only — this endpoint is not callable',
+  })
   listEvents() {
     return { info: 'This endpoint exists only for documentation purposes.' };
   }
@@ -251,7 +268,10 @@ Emitted to the **user's personal room** when they are removed from a list.
 \`\`\`
     `,
   })
-  @ApiResponse({ status: 200, description: 'Documentation only — this endpoint is not callable' })
+  @ApiResponse({
+    status: 200,
+    description: 'Documentation only — this endpoint is not callable',
+  })
   memberEvents() {
     return { info: 'This endpoint exists only for documentation purposes.' };
   }

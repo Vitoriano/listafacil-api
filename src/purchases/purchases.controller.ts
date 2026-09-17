@@ -108,10 +108,7 @@ export class PurchasesController {
       },
     },
   })
-  create(
-    @Body() dto: CreatePurchaseDto,
-    @CurrentUser('id') userId: string,
-  ) {
+  create(@Body() dto: CreatePurchaseDto, @CurrentUser('id') userId: string) {
     return this.purchasesService.create(dto, userId);
   }
 
@@ -120,7 +117,8 @@ export class PurchasesController {
   @ApiParam({ name: 'id', description: 'Purchase ID' })
   @ApiResponse({
     status: 200,
-    description: 'Purchase with store details and all items (including product data)',
+    description:
+      'Purchase with store details and all items (including product data)',
     schema: {
       example: {
         id: 'uuid',
@@ -193,7 +191,10 @@ export class PurchasesController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Invalid status transition (purchase not active)' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid status transition (purchase not active)',
+  })
   @ApiResponse({ status: 404, description: 'Purchase not found' })
   updateStatus(
     @Param('id') id: string,
@@ -290,7 +291,10 @@ export class PurchasesController {
   @ApiOperation({ summary: 'Remove an item from a purchase' })
   @ApiParam({ name: 'id', description: 'Purchase ID' })
   @ApiParam({ name: 'itemId', description: 'Purchase Item ID' })
-  @ApiResponse({ status: 204, description: 'Item removed successfully (no content)' })
+  @ApiResponse({
+    status: 204,
+    description: 'Item removed successfully (no content)',
+  })
   @ApiResponse({ status: 400, description: 'Purchase is not active' })
   @ApiResponse({ status: 404, description: 'Purchase or item not found' })
   removeItem(

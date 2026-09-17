@@ -16,7 +16,9 @@ export class StoresController {
   constructor(private storesService: StoresService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List stores with optional filters (city, state, type)' })
+  @ApiOperation({
+    summary: 'List stores with optional filters (city, state, type)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Paginated list of stores',

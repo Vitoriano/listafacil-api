@@ -43,9 +43,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
 
       error = this.getErrorName(statusCode);
-    } else if (
-      exception instanceof Prisma.PrismaClientKnownRequestError
-    ) {
+    } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       if (exception.code === 'P2002') {
         statusCode = HttpStatus.CONFLICT;
         error = 'Conflict';

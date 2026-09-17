@@ -50,10 +50,7 @@ export class UsersController {
       },
     },
   })
-  updateProfile(
-    @CurrentUser('id') userId: string,
-    @Body() dto: UpdateUserDto,
-  ) {
+  updateProfile(@CurrentUser('id') userId: string, @Body() dto: UpdateUserDto) {
     return this.usersService.updateProfile(userId, dto);
   }
 
@@ -61,7 +58,8 @@ export class UsersController {
   @ApiOperation({ summary: 'Get user purchase stats and total spent' })
   @ApiResponse({
     status: 200,
-    description: 'Aggregated stats: total purchases, prices submitted, and total spent',
+    description:
+      'Aggregated stats: total purchases, prices submitted, and total spent',
     schema: {
       example: {
         totalPurchases: 18,

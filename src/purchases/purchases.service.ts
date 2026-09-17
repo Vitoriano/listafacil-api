@@ -148,7 +148,9 @@ export class PurchasesService {
     if (!purchase) throw new NotFoundException('Purchase not found');
     if (purchase.userId !== userId) throw new ForbiddenException();
     if (purchase.status !== 'active') {
-      throw new BadRequestException('Cannot add items to a non-active purchase');
+      throw new BadRequestException(
+        'Cannot add items to a non-active purchase',
+      );
     }
 
     const item = await this.prisma.purchaseItem.create({
@@ -208,7 +210,10 @@ export class PurchasesService {
 
     await this.prisma.purchaseItem.delete({ where: { id: itemId } });
 
-    this.ws.emitToPurchase(purchaseId, 'purchase:item:removed', { purchaseId, itemId });
+    this.ws.emitToPurchase(purchaseId, 'purchase:item:removed', {
+      purchaseId,
+      itemId,
+    });
   }
 
   private async verifyPurchaseOwnership(purchaseId: string, userId: string) {
