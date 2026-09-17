@@ -4,11 +4,12 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - '3000:3000'
+      # 3000-3002 já estão em uso por outros projetos nesta máquina
+      - '3003:3000'
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/listafacil
+      # DATABASE_URL vem do .env (banco de dev no Neon). Redis interno da rede do compose.
       REDIS_URL: redis://redis:6379
     volumes:
       - .:/app
@@ -16,37 +17,17 @@ services:
       # ou remova o volume do serviço api (o CMD do Dockerfile.dev roda `npm ci` para alinhar deps).
       - /app/node_modules
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
 
-  postgres:
-    image: postgres:16-alpine
-    ports:
-      - '5432:5432'
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: listafacil
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   redis:
     image: redis:7-alpine
     ports:
-      - '6379:6379'
+      # 6380 no host para não colidir com um Redis local na 6379
+      - '6380:6379'
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 5s
       retries: 5
-
-volumes:
-  pgdata:

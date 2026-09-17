@@ -23,10 +23,7 @@
     "db:migrate:deploy": "npx prisma migrate deploy",
     "db:seed": "npx prisma db seed",
     "db:generate": "npx prisma generate",
-    "db:studio": "npx prisma studio",
-    "db:migrate:old": "npx ts-node prisma/migrate-old-data.ts",
-    "db:migrate:old:selftest": "npx ts-node prisma/migrate-old-data.selftest.ts",
-    "db:migrate:old:prices": "npx ts-node prisma/migrate-old-prices.ts"
+    "db:studio": "npx prisma studio"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.1.0",
