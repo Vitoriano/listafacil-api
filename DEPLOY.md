@@ -68,6 +68,19 @@ rm jwt.key jwt.pub
 
 Em Linux troque `base64 -i` por `base64 -w0`.
 
+## Domínio e DNS (Cloudflare, zona `nataldev.com.br`)
+
+Padrão dos outros serviços da VPS: um `A` `server-production.nataldev.com.br` aponta para o
+servidor, e cada API é um `CNAME` para ele, **sem proxy** (nuvem cinza).
+
+| Type | Name | Content | Proxy |
+|---|---|---|---|
+| CNAME | `api.listafacil` | `server-production.nataldev.com.br` | DNS only |
+
+Domínio final: `https://api.listafacil.nataldev.com.br`. Sem proxy porque o Traefik do Dokploy
+emite o certificado Let's Encrypt validando por HTTP direto no servidor. Confirme com
+`dig +short api.listafacil.nataldev.com.br` antes de configurar o domínio no Dokploy.
+
 ## Primeiro deploy
 
 1. Criar o stack **do Redis** no Dokploy (**Create Service → Compose**, provider GitHub,
@@ -75,15 +88,16 @@ Em Linux troque `base64 -i` por `base64 -w0`.
    `REDIS_PASSWORD` e fazer o deploy. Esse stack quase nunca muda; não precisa de webhook.
 2. Criar o stack **da API** (mesmo fluxo, compose path `./deploy/dokploy/api/docker-compose.yml`),
    preencher o Env (incluindo `REDIS_URL` com a senha do passo 1) e o domínio
-   (serviço `api`, porta `3000`, HTTPS ligado); copiar a URL do webhook de redeploy.
+   `api.listafacil.nataldev.com.br` (serviço `api`, porta `3000`, HTTPS ligado);
+   copiar a URL do webhook de redeploy.
 3. Tornar o package `ghcr.io/vitoriano/listafacil-api` público (ou cadastrar credenciais do GHCR no Dokploy).
 4. Configurar os secrets no GitHub e criar a branch `production` a partir de `main`.
 5. `git push origin production` — acompanhar em Actions → *Deploy to PROD*.
 
 ## Verificar
 
-- Health: `https://<dominio>/v1/health` → `{"status":"ok", ...}`
-- Swagger: `https://<dominio>/api/docs`
+- Health: `https://api.listafacil.nataldev.com.br/v1/health` → `{"status":"ok", ...}`
+- Swagger: `https://api.listafacil.nataldev.com.br/api/docs`
 - Logs: aba **Logs** do serviço no Dokploy.
 
 ## Notas
