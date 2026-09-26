@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -65,6 +66,39 @@ export class PurchasesService {
     }));
   }
 
+  /**
+   * Compra em andamento do usuário (no máximo uma por vez). Devolve itens com
+   * produto e a lista vinculada (com itens) para o app retomar a sessão.
+   */
+  async findActive(userId: string) {
+    const purchase = await this.prisma.purchase.findFirst({
+      where: { userId, status: 'active' },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        store: { select: { id: true, name: true } },
+        items: { include: { product: true } },
+        linkedList: {
+          select: {
+            id: true,
+            name: true,
+            items: {
+              select: {
+                id: true,
+                productId: true,
+                quantity: true,
+                estimatedPrice: true,
+                checked: true,
+                product: { select: { id: true, name: true, unit: true } },
+              },
+              orderBy: { createdAt: 'asc' },
+            },
+          },
+        },
+      },
+    });
+    return purchase ?? null;
+  }
+
   async findById(id: string, userId: string) {
     const purchase = await this.prisma.purchase.findUnique({
       where: { id },
@@ -82,6 +116,23 @@ export class PurchasesService {
     await this.prisma.store.findUniqueOrThrow({
       where: { id: dto.storeId },
     });
+
+    const active = await this.prisma.purchase.findFirst({
+      where: { userId, status: 'active' },
+      select: { id: true },
+    });
+    if (active) {
+      throw new ConflictException({
+        statusCode: 409,
+        message: 'Já existe uma compra em andamento',
+        error: 'Conflict',
+        activePurchaseId: active.id,
+      });
+    }
+
+    if (dto.linkedListId) {
+      await this.verifyListAccess(dto.linkedListId, userId);
+    }
 
     const purchase = await this.prisma.purchase.create({
       data: {
@@ -103,20 +154,38 @@ export class PurchasesService {
     return purchase;
   }
 
-  async updateStatus(id: string, dto: UpdatePurchaseDto, userId: string) {
+  async update(id: string, dto: UpdatePurchaseDto, userId: string) {
     const purchase = await this.prisma.purchase.findUnique({ where: { id } });
     if (!purchase) throw new NotFoundException('Purchase not found');
     if (purchase.userId !== userId) throw new ForbiddenException();
 
     if (purchase.status !== 'active') {
       throw new BadRequestException(
-        `Cannot transition from ${purchase.status} to ${dto.status}`,
+        `Cannot update a ${purchase.status} purchase`,
       );
     }
 
-    const data: any = { status: dto.status };
-    if (dto.status === 'completed') {
-      data.completedAt = new Date();
+    const data: Record<string, unknown> = {};
+
+    if (dto.linkedListId !== undefined) {
+      if (dto.linkedListId) {
+        await this.verifyListAccess(dto.linkedListId, userId);
+      }
+      data.linkedListId = dto.linkedListId;
+    }
+
+    if (dto.status) {
+      if (dto.status === 'active') {
+        throw new BadRequestException('Purchase is already active');
+      }
+      data.status = dto.status;
+      if (dto.status === 'completed') {
+        data.completedAt = new Date();
+      }
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('Nothing to update');
     }
 
     const updated = await this.prisma.purchase.update({
@@ -129,13 +198,27 @@ export class PurchasesService {
       await this.cacheManager.del(`user:${userId}:stats`);
     }
 
-    this.ws.emitToPurchase(id, 'purchase:status:updated', updated);
+    if (dto.status) {
+      this.ws.emitToPurchase(id, 'purchase:status:updated', updated);
 
-    if (purchase.linkedListId) {
-      this.ws.emitToList(purchase.linkedListId, 'purchase:status:updated', {
-        purchaseId: id,
-        status: dto.status,
-      });
+      const listId = updated.linkedListId ?? purchase.linkedListId;
+      if (listId) {
+        this.ws.emitToList(listId, 'purchase:status:updated', {
+          purchaseId: id,
+          status: dto.status,
+        });
+      }
+    }
+
+    if (dto.linkedListId !== undefined) {
+      this.ws.emitToPurchase(id, 'purchase:updated', updated);
+      if (dto.linkedListId) {
+        this.ws.emitToList(dto.linkedListId, 'purchase:started', {
+          purchaseId: id,
+          storeId: updated.storeId,
+          userId,
+        });
+      }
     }
 
     return updated;
@@ -214,6 +297,21 @@ export class PurchasesService {
       purchaseId,
       itemId,
     });
+  }
+
+  /** Usuário precisa ser dono ou membro da lista para vinculá-la a uma compra. */
+  private async verifyListAccess(listId: string, userId: string) {
+    const list = await this.prisma.shoppingList.findUnique({
+      where: { id: listId },
+      select: {
+        ownerId: true,
+        members: { where: { userId }, select: { userId: true } },
+      },
+    });
+    if (!list) throw new NotFoundException('Shopping list not found');
+    if (list.ownerId !== userId && list.members.length === 0) {
+      throw new ForbiddenException('No access to this list');
+    }
   }
 
   private async verifyPurchaseOwnership(purchaseId: string, userId: string) {

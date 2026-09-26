@@ -90,6 +90,59 @@ export class PurchasesController {
     return this.purchasesService.findRecent(userId);
   }
 
+  @Get('active')
+  @ApiOperation({
+    summary: 'Get the purchase currently in progress (if any)',
+    description:
+      'Returns the single active purchase of the authenticated user with its items, ' +
+      'store and linked list (with items), or null when there is none. Used by the app ' +
+      'to resume the shopping session after a restart.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Active purchase or null',
+    schema: {
+      example: {
+        id: 'uuid',
+        userId: 'uuid',
+        storeId: 'uuid',
+        linkedListId: 'uuid | null',
+        status: 'active',
+        createdAt: '2026-03-30T00:00:00.000Z',
+        completedAt: null,
+        store: { id: 'uuid', name: 'Supermercado X' },
+        items: [
+          {
+            id: 'uuid',
+            productId: 'uuid',
+            barcode: '7891234567890',
+            price: '4.89',
+            quantity: 2,
+            fromListId: 'uuid | null',
+            product: { id: 'uuid', name: 'Arroz Tio João 5kg', unit: 'kg' },
+          },
+        ],
+        linkedList: {
+          id: 'uuid',
+          name: 'Compras da semana',
+          items: [
+            {
+              id: 'uuid',
+              productId: 'uuid',
+              quantity: 1,
+              estimatedPrice: '21.90',
+              checked: false,
+              product: { id: 'uuid', name: 'Arroz Tio João 5kg', unit: 'kg' },
+            },
+          ],
+        },
+      },
+    },
+  })
+  findActive(@CurrentUser('id') userId: string) {
+    return this.purchasesService.findActive(userId);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create a new purchase' })
   @ApiResponse({
@@ -107,6 +160,11 @@ export class PurchasesController {
         store: { id: 'uuid', name: 'Supermercado X' },
       },
     },
+  })
+  @ApiResponse({
+    status: 409,
+    description:
+      'User already has an active purchase (body includes activePurchaseId)',
   })
   create(@Body() dto: CreatePurchaseDto, @CurrentUser('id') userId: string) {
     return this.purchasesService.create(dto, userId);
@@ -173,7 +231,9 @@ export class PurchasesController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update purchase status (complete or cancel)' })
+  @ApiOperation({
+    summary: 'Update an active purchase: complete/cancel it or (un)link a list',
+  })
   @ApiParam({ name: 'id', description: 'Purchase ID' })
   @ApiResponse({
     status: 200,
@@ -196,12 +256,12 @@ export class PurchasesController {
     description: 'Invalid status transition (purchase not active)',
   })
   @ApiResponse({ status: 404, description: 'Purchase not found' })
-  updateStatus(
+  update(
     @Param('id') id: string,
     @Body() dto: UpdatePurchaseDto,
     @CurrentUser('id') userId: string,
   ) {
-    return this.purchasesService.updateStatus(id, dto, userId);
+    return this.purchasesService.update(id, dto, userId);
   }
 
   @Post(':id/items')
