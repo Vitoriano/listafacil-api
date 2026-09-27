@@ -4,6 +4,24 @@ import { PrismaService } from '../core/prisma/prisma.service';
 import { PaginatedResponse } from '../core/dto/paginated-response.dto';
 import { CreateStoreDto, ListStoresQueryDto } from './dto';
 
+const DEFAULT_RADIUS_KM = 50;
+
+function haversineKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const toRad = (v: number) => (v * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 @Injectable()
 export class StoresService {
   constructor(private prisma: PrismaService) {}
@@ -21,6 +39,11 @@ export class StoresService {
       where.type = query.type;
     }
 
+    // Busca por proximidade: ordena por distância e limita ao raio informado.
+    if (query.lat !== undefined && query.lng !== undefined) {
+      return this.findNearby(where, query);
+    }
+
     const [data, total] = await Promise.all([
       this.prisma.store.findMany({
         where,
@@ -32,6 +55,35 @@ export class StoresService {
     ]);
 
     return new PaginatedResponse(data, total, query.page, query.limit);
+  }
+
+  /**
+   * Lojas dentro do raio, mais próximas primeiro, com `distanceKm` em cada item.
+   * A tabela de lojas é pequena, então o cálculo é feito em memória (Haversine).
+   */
+  private async findNearby(
+    where: Prisma.StoreWhereInput,
+    query: ListStoresQueryDto,
+  ) {
+    const lat = query.lat as number;
+    const lng = query.lng as number;
+    const radiusKm = query.radiusKm ?? DEFAULT_RADIUS_KM;
+
+    const stores = await this.prisma.store.findMany({ where });
+
+    const nearby = stores
+      .map((store) => ({
+        ...store,
+        distanceKm:
+          Math.round(
+            haversineKm(lat, lng, store.latitude, store.longitude) * 100,
+          ) / 100,
+      }))
+      .filter((store) => store.distanceKm <= radiusKm)
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+
+    const data = nearby.slice(query.skip, query.skip + query.limit);
+    return new PaginatedResponse(data, nearby.length, query.page, query.limit);
   }
 
   async findById(id: string) {

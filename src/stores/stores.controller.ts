@@ -18,6 +18,9 @@ export class StoresController {
   @Get()
   @ApiOperation({
     summary: 'List stores with optional filters (city, state, type)',
+    description:
+      'With `lat` and `lng` the result is restricted to `radiusKm` (default 50) and ' +
+      'sorted by distance; each item then includes `distanceKm`.',
   })
   @ApiResponse({
     status: 200,
