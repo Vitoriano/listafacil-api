@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../core/prisma/prisma.service';
 import { PaginatedResponse } from '../core/dto/paginated-response.dto';
 import { CreateStoreDto, ListStoresQueryDto } from './dto';
+import { GooglePlacesService } from './google-places.service';
 
 const DEFAULT_RADIUS_KM = 50;
 
@@ -24,7 +25,10 @@ function haversineKm(
 
 @Injectable()
 export class StoresService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private places: GooglePlacesService,
+  ) {}
 
   async findAll(query: ListStoresQueryDto) {
     const where: Prisma.StoreWhereInput = {};
@@ -92,6 +96,28 @@ export class StoresService {
       throw new NotFoundException('Store not found');
     }
     return store;
+  }
+
+  /**
+   * Cadastra (uma única vez) uma loja a partir de um lugar do Google.
+   * Se já existir com esse googlePlaceId, devolve a existente sem chamar o Google.
+   */
+  async createFromPlace(placeId: string) {
+    const existing = await this.prisma.store.findUnique({
+      where: { googlePlaceId: placeId },
+    });
+    if (existing) return existing;
+
+    const details = await this.places.details(placeId);
+    return this.create({
+      name: details.name,
+      address: details.address,
+      city: details.city || 'Desconhecida',
+      state: (details.state || 'NA').slice(0, 2).toUpperCase(),
+      latitude: details.latitude,
+      longitude: details.longitude,
+      googlePlaceId: placeId,
+    });
   }
 
   async create(dto: CreateStoreDto) {
