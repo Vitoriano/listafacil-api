@@ -7,13 +7,84 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { StoresService } from './stores.service';
-import { CreateStoreDto, ListStoresQueryDto } from './dto';
+import {
+  CreateStoreDto,
+  ListStoresQueryDto,
+  NearbyPlacesQueryDto,
+  SearchPlacesQueryDto,
+} from './dto';
+import { GooglePlacesService } from './google-places.service';
 
 @ApiTags('Stores')
 @ApiBearerAuth()
 @Controller('stores')
 export class StoresController {
-  constructor(private storesService: StoresService) {}
+  constructor(
+    private storesService: StoresService,
+    private googlePlaces: GooglePlacesService,
+  ) {}
+
+  @Get('places/nearby')
+  @ApiOperation({
+    summary:
+      'Supermarkets near a point via Google Places (server-side, cached)',
+    description:
+      '20 nearest supermarkets per page, cached in Redis per ~550 m cell for 24 h. ' +
+      'Pass `pageToken` to get the next page (max 3 pages). `available: false` when the ' +
+      'server has no Google key.',
+  })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      example: {
+        available: true,
+        places: [
+          {
+            placeId: 'ChIJ...',
+            name: 'Nordestão Tirol',
+            address: 'Av. Prudente de Morais, 1140 - Tirol',
+            latitude: -5.79,
+            longitude: -35.21,
+          },
+        ],
+        nextPageToken: 'Aap_...',
+      },
+    },
+  })
+  nearbyPlaces(@Query() query: NearbyPlacesQueryDto) {
+    return this.googlePlaces.nearbySupermarkets(
+      query.lat,
+      query.lng,
+      query.pageToken,
+    );
+  }
+
+  @Get('places/search')
+  @ApiOperation({
+    summary:
+      'Search supermarkets by name near a point (Google Text Search, cached)',
+  })
+  @ApiResponse({
+    status: 200,
+    schema: { example: { available: true, places: [] } },
+  })
+  searchPlaces(@Query() query: SearchPlacesQueryDto) {
+    return this.googlePlaces.searchByName(query.q, query.lat, query.lng);
+  }
+
+  @Post('places/:placeId')
+  @ApiOperation({
+    summary: 'Register (once) a store from a Google place id and return it',
+    description:
+      'Idempotent: returns the existing store when the place was already registered. ' +
+      'Otherwise fetches place details on the server and creates the store.',
+  })
+  @ApiParam({ name: 'placeId', description: 'Google Place ID' })
+  @ApiResponse({ status: 201, description: 'Store (existing or created)' })
+  @ApiResponse({ status: 503, description: 'Google Places unavailable' })
+  createFromPlace(@Param('placeId') placeId: string) {
+    return this.storesService.createFromPlace(placeId);
+  }
 
   @Get()
   @ApiOperation({

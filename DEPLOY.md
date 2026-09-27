@@ -46,6 +46,7 @@ O container tem o alias fixo `listafacil-redis` na rede. Sem domínio e sem port
 | `JWT_PRIVATE_KEY_B64` | sim | PEM da chave privada RSA em base64 (uma linha) |
 | `JWT_PUBLIC_KEY_B64` | sim | PEM da chave pública RSA em base64 (uma linha) |
 | `JWT_ACCESS_EXPIRATION` | não | Padrão `15m` |
+| `GOOGLE_PLACES_API_KEY` | não | Chave do Google Places (Nearby/Text Search/Details) usada pela API para listar mercados próximos. Sem ela o app mostra só as lojas do banco. |
 | `JWT_REFRESH_EXPIRATION_DAYS` | não | Padrão `30` |
 | `IMAGE_TAG` | não | Padrão `latest` |
 
